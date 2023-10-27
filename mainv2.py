@@ -126,13 +126,14 @@ n_class = 3
 n_features = 20
 reg = 0.01
 stepsize = 0.01
+
 print("1 to train the model // 2 to train with all the data // 3 to load a model and predict")
 anwser = input()
 match int(anwser):
     case 1:
         #Train the model with a subset of the data
         model = LogisticRegression(n_class, n_features, reg)
-        trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=22500)
+        trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
         training_loss, training_error = model.train(trainset, stepsize, 1000)
 
         #Save the model with the test error as name
