@@ -121,20 +121,37 @@ class LogisticRegression():
         
         print("Entrainement terminé :l'erreur d'entrainement est {:.2f}%".format(errors[-1]*100))
         return np.array(losses), np.array(errors)
+    
+def find_hyperparameters(trainset):
+    reg_test = [0.001, 0.01,0.05,0.1,0.5,1]
+    stepsize_test = [0.001, 0.01,0.05,0.1,0.5,1]
+    n_steps = 1000
+    best_error = 1
+    best_reg = 0
+    best_stepsize = 0
+    for reg in reg_test:
+        for stepsize in stepsize_test:
+            model = LogisticRegression(n_class, n_features, reg)
+            training_loss, training_error = model.train(trainset, stepsize, n_steps)
+            if training_error[-1] < best_error:
+                best_error = training_error[-1]
+                best_reg = reg
+                best_stepsize = stepsize
+    return best_reg, best_stepsize
 
 n_class = 3
 n_features = 20
-reg = 0.01
-stepsize = 0.01
+reg = 0.001
+stepsize = 0.5
 
-print("1 to train the model // 2 to train with all the data // 3 to load a model and predict")
+print("1 to train the model // 2 to train with all the data // 3 to load a model and predict // 4 to find the best hyperparameters // 5 to start training from an existing model // 6 to start training from an existing model with all the data")
 anwser = input()
 match int(anwser):
     case 1:
         #Train the model with a subset of the data
         model = LogisticRegression(n_class, n_features, reg)
         trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
-        training_loss, training_error = model.train(trainset, stepsize, 1000)
+        training_loss, training_error = model.train(trainset, stepsize, 10000)
 
         #Save the model with the test error as name
         test_error = model.error_rate(testset[:,:-1], testset[:,-1])*100
@@ -147,7 +164,7 @@ match int(anwser):
         trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
         
         model = LogisticRegression(n_class, n_features, reg)
-        training_loss, training_error = model.train(trainset, stepsize, 100)
+        training_loss, training_error = model.train(trainset, stepsize, 10000)
 
         #Save the model with a random name
         rgn = str(np.random.default_rng().integers(0, 50))+str(np.random.default_rng().integers(0, 50))
@@ -170,3 +187,37 @@ match int(anwser):
             for idx, pred in enumerate(predictions, 1):  
                 f.write(f"{idx},{pred}\n")
 
+    case 4:
+        #Find the best hyperparameters
+        trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
+        reg, stepsize = find_hyperparameters(trainset)
+        print("The best hyperparameters are reg = {} and stepsize = {}".format(reg,stepsize))
+
+    case 5:
+        #Train the model with a subset of the data from an existing model
+        print("Enter the name of the model to load :")
+        filename = input()
+        model = load(f"model/{filename}")
+        trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
+        stepsize = 0.1
+        training_loss, training_error = model.train(trainset, stepsize, 10000)
+
+        #Save the model with the test error as name
+        test_error = model.error_rate(testset[:,:-1], testset[:,-1])*100
+        print("The test error is {:.2f}%".format(test_error))
+        filename = f"model/error_{test_error:.2f}.joblib"
+        dump(model, filename)
+
+    case 6:
+        #Train the model with all the data from an existing model
+        print("Enter the name of the model to load :")
+        filename = input()
+        model = load(f"model/{filename}")
+        trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
+        stepsize = 0.1
+        training_loss, training_error = model.train(trainset, stepsize, 10000)
+        #Save the model with a random name
+        rgn = str(np.random.default_rng().integers(0, 50))+str(np.random.default_rng().integers(0, 50))
+        print(rgn)
+        filename = f"model/alldata_{rgn}.joblib"
+        dump(model, filename)
