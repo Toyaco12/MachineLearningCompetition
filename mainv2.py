@@ -107,42 +107,51 @@ class LogisticRegression():
         grad += self.reg * self.w
         return grad
     
-    def train(self,data,stepsize,n_steps):
+    def train(self,data,data_test,stepsize,n_steps):
         
         X = data[:,:-1]
         y = data[:,-1]
         losses = []
         errors = []
+        errors_test = []
         
         for i in range(n_steps):
+            if(i%100 == 0):
+                stepsize = stepsize/2
             self.w -= stepsize * self.gradient(X, y)
             losses.append(self.loss(X, y))
             errors.append(self.error_rate(X, y))
-        
+            errors_test.append(self.error_rate(data_test[:,:-1], data_test[:,-1]))
+
         print("Entrainement terminé :l'erreur d'entrainement est {:.2f}%".format(errors[-1]*100))
+        print("La plus petite erreur de test est {:.2f}%".format(min(errors_test)*100), "à l'itération", np.argmin(errors_test))
         return np.array(losses), np.array(errors)
     
 def find_hyperparameters(trainset):
-    reg_test = [0.001, 0.01,0.05,0.1,0.5,1]
-    stepsize_test = [0.001, 0.01,0.05,0.1,0.5,1]
-    n_steps = 1000
+    reg_test = [0.001,0.0001,0.00001]
+    stepsize_test = [1,3,5,7]
+    n_step = [100,150,250,500,1000]
     best_error = 1
     best_reg = 0
     best_stepsize = 0
-    for reg in reg_test:
-        for stepsize in stepsize_test:
-            model = LogisticRegression(n_class, n_features, reg)
-            training_loss, training_error = model.train(trainset, stepsize, n_steps)
-            if training_error[-1] < best_error:
-                best_error = training_error[-1]
-                best_reg = reg
-                best_stepsize = stepsize
-    return best_reg, best_stepsize
+    for n_steps in n_step:
+        for reg in reg_test:
+            for stepsize in stepsize_test:
+                model = LogisticRegression(n_class, n_features, reg)
+                training_loss, training_error = model.train(trainset, stepsize, n_steps)
+                if training_error[-1] < best_error:
+                    best_error = training_error[-1]
+                    best_reg = reg
+                    best_stepsize = stepsize
+                    best_n_steps = n_steps
+    return best_reg, best_stepsize, best_n_steps
 
 n_class = 3
 n_features = 20
-reg = 0.001
-stepsize = 0.5
+reg = 0.0001
+stepsize = 0.1
+n_steps = 100000
+
 
 print("1 to train the model // 2 to train with all the data // 3 to load a model and predict // 4 to find the best hyperparameters // 5 to start training from an existing model // 6 to start training from an existing model with all the data")
 anwser = input()
@@ -150,8 +159,8 @@ match int(anwser):
     case 1:
         #Train the model with a subset of the data
         model = LogisticRegression(n_class, n_features, reg)
-        trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
-        training_loss, training_error = model.train(trainset, stepsize, 10000)
+        trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=35000)
+        training_loss, training_error = model.train(trainset,testset,stepsize, n_steps)
 
         #Save the model with the test error as name
         test_error = model.error_rate(testset[:,:-1], testset[:,-1])*100
@@ -164,7 +173,7 @@ match int(anwser):
         trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
         
         model = LogisticRegression(n_class, n_features, reg)
-        training_loss, training_error = model.train(trainset, stepsize, 10000)
+        training_loss, training_error = model.train(trainset, stepsize, n_steps)
 
         #Save the model with a random name
         rgn = str(np.random.default_rng().integers(0, 50))+str(np.random.default_rng().integers(0, 50))
@@ -190,8 +199,8 @@ match int(anwser):
     case 4:
         #Find the best hyperparameters
         trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
-        reg, stepsize = find_hyperparameters(trainset)
-        print("The best hyperparameters are reg = {} and stepsize = {}".format(reg,stepsize))
+        reg, stepsize,n_steps = find_hyperparameters(trainset)
+        print("The best hyperparameters are reg = {} and stepsize = {} and n_steps = {}".format(reg,stepsize,n_steps))
 
     case 5:
         #Train the model with a subset of the data from an existing model
@@ -200,7 +209,7 @@ match int(anwser):
         model = load(f"model/{filename}")
         trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
         stepsize = 0.1
-        training_loss, training_error = model.train(trainset, stepsize, 10000)
+        training_loss, training_error = model.train(trainset, stepsize, n_steps)
 
         #Save the model with the test error as name
         test_error = model.error_rate(testset[:,:-1], testset[:,-1])*100
@@ -215,7 +224,7 @@ match int(anwser):
         model = load(f"model/{filename}")
         trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
         stepsize = 0.1
-        training_loss, training_error = model.train(trainset, stepsize, 10000)
+        training_loss, training_error = model.train(trainset, stepsize, n_steps)
         #Save the model with a random name
         rgn = str(np.random.default_rng().integers(0, 50))+str(np.random.default_rng().integers(0, 50))
         print(rgn)
