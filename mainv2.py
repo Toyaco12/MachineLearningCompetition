@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from joblib import dump, load
+import tqdm
 
 weather_dataset_train = np.genfromtxt('train.csv', delimiter=',', skip_header=1)
 weather_dataset_test = np.genfromtxt('test.csv', delimiter=',', skip_header=1)
@@ -107,15 +108,18 @@ class LogisticRegression():
         grad += self.reg * self.w
         return grad
     
-    def train(self,data,stepsize,n_steps):
+    def train(self,data,L,t0,n_steps):
         
         X = data[:,:-1]
         y = data[:,-1]
         losses = []
         errors = []
         
-        for i in range(n_steps):
-            self.w -= stepsize * self.gradient(X, y)
+        eta = L/t0
+        for i in tqdm.tqdm(range(n_steps)):
+            if i % 100 == 0:
+                eta /= 2
+            self.w -= eta * self.gradient(X, y)
             losses.append(self.loss(X, y))
             errors.append(self.error_rate(X, y))
         
@@ -125,47 +129,71 @@ class LogisticRegression():
 n_class = 3
 n_features = 20
 reg = 0.01
-stepsize = 0.01
-print("1 to train the model // 2 to train with all the data // 3 to load a model and predict")
-anwser = input()
-match int(anwser):
-    case 1:
-        #Train the model with a subset of the data
-        model = LogisticRegression(n_class, n_features, reg)
-        trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=22500)
-        training_loss, training_error = model.train(trainset, stepsize, 1000)
+# stepsize = 0.01
+L = 1
+t0 = 2
 
-        #Save the model with the test error as name
-        test_error = model.error_rate(testset[:,:-1], testset[:,-1])*100
-        print("The test error is {:.2f}%".format(test_error))
-        filename = f"model/error_{test_error:.2f}.joblib"
-        dump(model, filename)
+def case1(L, t0, n):
+    #Train the model with a subset of the data
+    model = LogisticRegression(n_class, n_features, reg)
+    trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
+    training_loss, training_error = model.train(trainset,L,t0, n)
 
-    case 2:
-        #Train the model with all the data
-        trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
+    #Save the model with the test error as name
+    test_error = model.error_rate(testset[:,:-1], testset[:,-1])*100
+    print("The test error is {:.2f}%".format(test_error))
+    filename = f"model/error_{test_error:.2f}.joblib"
+    dump(model, filename)
+
+# L = [1]
+# t0 = [2,3,4,5,6,7,8]
+# n = [1000,2000,3000]
+# for n in n:
+#     for t0 in t0:
+#         print(f"{L}/{t0}+i/100 & {n} ->")
+#         case1(L[0], t0, n)
+case1(2, 1, 2000)
+
+# print("1 to train the model // 2 to train with all the data // 3 to load a model and predict")
+# answer = input()
+# match int(answer):
+#     case 1:
+#         #Train the model with a subset of the data
+#         model = LogisticRegression(n_class, n_features, reg)
+#         trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
+#         training_loss, training_error = model.train(trainset,L,t0, 1000)
+
+#         #Save the model with the test error as name
+#         test_error = model.error_rate(testset[:,:-1], testset[:,-1])*100
+#         print("The test error is {:.2f}%".format(test_error))
+#         filename = f"model/error_{test_error:.2f}.joblib"
+#         dump(model, filename)
+
+#     case 2:
+#         #Train the model with all the data
+#         trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
         
-        model = LogisticRegression(n_class, n_features, reg)
-        training_loss, training_error = model.train(trainset, stepsize, 100)
+#         model = LogisticRegression(n_class, n_features, reg)
+#         training_loss, training_error = model.train(trainset, L,t0, 100)
 
-        #Save the model with a random name
-        rgn = str(np.random.default_rng().integers(0, 50))+str(np.random.default_rng().integers(0, 50))
-        filename = f"model/alldata_{rgn}.joblib"
-        dump(model, filename)
-    case 3:
+#         #Save the model with a random name
+#         rgn = str(np.random.default_rng().integers(0, 50))+str(np.random.default_rng().integers(0, 50))
+#         filename = f"model/alldata_{rgn}.joblib"
+#         dump(model, filename)
+#     case 3:
 
-        trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
+#         trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
         
-        #Load a model and predict
-        print("Enter the name of the model to load :")
+#         #Load a model and predict
+#         print("Enter the name of the model to load :")
 
-        filename = input()
-        model = load(f"model/{filename}")
+#         filename = input()
+#         model = load(f"model/{filename}")
 
-        predictions = model.predict(testset)
+#         predictions = model.predict(testset)
 
-        #Save predictions in a file with the format n,prediction
-        with open(f"submission/{filename.rsplit('.',1)[0]}.csv", 'w') as f: 
-            for idx, pred in enumerate(predictions, 1):  
-                f.write(f"{idx},{pred}\n")
+#         #Save predictions in a file with the format n,prediction
+#         with open(f"submission/{filename.rsplit('.',1)[0]}.csv", 'w') as f: 
+#             for idx, pred in enumerate(predictions, 1):  
+#                 f.write(f"{idx},{pred}\n")
 
