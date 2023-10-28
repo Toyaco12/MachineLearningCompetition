@@ -1,86 +1,75 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from joblib import dump, load
-import tqdm
 
 weather_dataset_train = np.genfromtxt('train.csv', delimiter=',', skip_header=1)
 weather_dataset_test = np.genfromtxt('test.csv', delimiter=',', skip_header=1)
 
 np.set_printoptions(precision=10, suppress=True)
 
-def preprocess(data, label_subset, feature_subset, n_train):
+class Gaussian:
+    def __init__(self, dim):
+        self.dim = dim  # dimension de la gaussienne
+        self.mu = np.zeros(dim)
+        self.sigmasq = None
+        self.covariance = None
 
-    """Effectue une partition aléatoire des données en sous-ensembles
-    train set et test set avec le sous-ensemble de classes label_subset
-    et le sous-ensemble de feature feature_subset"""
+    # Apprendre les valeurs de mu et sigmasq
+    def train(self, data):
+        self.mu = np.mean(data, axis=0)
+        # self.sigmasq = np.sum((data - self.mu) ** 2.0) / (self.dim * data.shape[0])
+        self.covariance = np.cov(data, rowvar=False)
     
-    # on extrait seulement les classes de label_subset
-    data = data[np.isin(data[:,-1],label_subset),:]
+    # Calculer la log-vraisemblance
+    def log_likelihood(self, data):
+        # normalisation_log = self.dim * -(np.log(np.sqrt(self.sigmasq)) + (1 / 2) * np.log(2 * np.pi))
+        # return normalisation_log - np.sum((data - self.mu) ** 2.0, axis=1) / (2.0 * self.sigmasq)
+        normalisation_log = -np.log(np.sqrt(np.linalg.det(self.covariance))) - (self.dim / 2) * np.log(2 * np.pi)
+        return normalisation_log - (np.dot( (data - self.mu), np.linalg.inv(self.covariance)) * (data - self.mu) ).sum(axis=1) / 2
 
-    # on extrait les features et leurs étiquettes
-    data = data[:, feature_subset + [-1]]
+class BayesClassifier:
+    def __init__(self, ML_models, priors):
+        self.ML_models = ML_models
+        self.priors = priors
+        self.n_classes = len(ML_models)
+    
+    def log_likelihood(self, data):
+        log_pred = np.zeros((data.shape[0], self.n_classes))
+        for i in range(self.n_classes):
+            log_pred[:, i] = self.ML_models[i].log_likelihood(data) + np.log(self.priors[i])
+        return log_pred
 
-    # on ajoute une colonne pour le biais
-    data = np.insert(data, -1, 1, axis=1)
+data = weather_dataset_train[1:,1:]
+test_data = weather_dataset_test[1:,1:]
 
-    # on sépare en train et test
-    inds = np.arange(data.shape[0])
-    np.random.shuffle(inds)
-    train_inds = inds[:n_train]
-    test_inds = inds[n_train:]
-    trainset = data[train_inds]
-    testset = data[test_inds]
+# Séparer les exemples par classe
+X0 = data[data[:,-1] == 0]
+X0 = X0[:,:-1]
+X1 = data[data[:,-1] == 1]
+X1 = X1[:,:-1]
+X2 = data[data[:,-1] == 2]
+X2 = X2[:,:-1]
 
-    # on normalise les données pour qu'elles soient de moyenne 0
-    # et d'écart-type 1 par caractéristique et on applique
-    # ces mêmes transformations au test set 
-    mu = trainset[:,:-2].mean(axis=0)
-    sigma  = trainset[:,:-2].std(axis=0)
-    trainset[:,:-2] = (trainset[:,:-2] -mu)/sigma
-    testset[:,:-2] = (testset[:,:-2] -mu)/sigma
+# Créer un modèle par classe et les entraîner
+model0 = Gaussian(X0.shape[1])
+model0.train(X0)
+model1 = Gaussian(X1.shape[1])
+model1.train(X1)
+model2 = Gaussian(X2.shape[1])
+model2.train(X2)
 
-    return trainset, testset
+ML_models = [model0, model1, model2]
+priors = [X0.shape[0] / data.shape[0], X1.shape[0] / data.shape[0], X2.shape[0] / data.shape[0]]
 
-def preprocess_V2(data_train,data_test, label_subset, feature_subset):
+# Classifieur avec modèles gaussiens et priors
+classifier = BayesClassifier(ML_models, priors)
 
-    # on extrait seulement les classes de label_subset
-    data_train = data_train[np.isin(data_train[:,-1],label_subset),:]
+# Calculer l'erreur
+log_pred = classifier.log_likelihood(test_data)
+pred_vect = np.argmax(log_pred, axis=1)
 
-    # on extrait les features et leurs étiquettes
-    data_train = data_train[:, feature_subset + [-1]]
-    data_test = data_test[:, feature_subset]
-    # on ajoute une colonne pour le biais
+# err = np.mean(pred != data[:,-1])
+# print(f"Erreur sur le train: {err:.4f}")
 
-    trainset = data_train
-    testset = data_test
-
-    # on normalise les données pour qu'elles soient de moyenne 0
-    # et d'écart-type 1 par caractéristique et on applique
-    # ces mêmes transformations au test set 
-    mu = trainset[:,:-1].mean(axis=0)
-    sigma  = trainset[:,:-1].std(axis=0)
-    trainset[:,:-1] = (trainset[:,:-1] -mu)/sigma
-    testset[:,:] = (testset[:,:] -mu)/sigma
-
-    trainset = np.insert(data_train, -1, 1, axis=1)
-    testset = np.insert(data_test,testset.shape[1], 1, axis=1)
-
-    return trainset, testset
-
-
-class NaiveBayes:
-"""
-    Utiliser le classifieur de Bayes Naïf pour classifier les données
-    en utilisant la loi normale pour estimer les densités univariés.
-"""
-    def __init__(self, sigma):
-        self.sigma = sigma
-        self.prior = []
-
-    def train():
-        """
-            Estimate the density of points for each class.
-            Estimate the prior probability of each class.
-        """
-        pass
-
+filename = "bayes.csv"
+with open(f"submission/{filename}.csv", 'w') as f: 
+    for idx, pred in enumerate(pred_vect, 1):  
+        f.write(f"{idx},{pred}\n")

@@ -149,8 +149,18 @@ def train_all():
     pass
 
 # Fonction pour charger un modèle et faire des prédictions.
-def test():
-    pass
+def test(filename):
+    trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
+    
+    #Load a model and predict
+    model = load(f"model/{filename}")
+
+    predictions = model.predict(testset)
+
+    #Save predictions in a file with the format n,prediction
+    with open(f"submission/{filename.rsplit('.',1)[0]}.csv", 'w') as f: 
+        for idx, pred in enumerate(predictions, 1):  
+            f.write(f"{idx},{pred}\n")
 
 def val_exist(filename):
     #Train the model with a subset of the data from an existing model
@@ -165,8 +175,8 @@ def val_exist(filename):
     # filename = f"model/error_{test_error:.2f}.joblib"
     # dump(model, filename)
 
-val_exist("error_15.81.joblib")
-
+# val_exist("error_15.81.joblib")
+test("error_15.81.joblib")
 
 
 ### VAL OPT
