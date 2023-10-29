@@ -120,22 +120,18 @@ class LogisticRegression():
             losses.append(self.loss(X, y))
             errors.append(self.error_rate(X, y))
             errors_test.append(self.error_rate(data_test[:,:-1], data_test[:,-1]))
-            if(i>2 and (errors_test[i-1] - errors_test[i])>1/i):
-                z=0.9
-                stepsize = stepsize * z
-                z = z - 1/i 
-            self.w -= stepsize * self.gradient(X, y)
+            if(i>5 and (errors_test[i-1] - errors_test[i])>0 and (errors_test[i-2] - errors_test[i-1])<0 and (errors_test[i-3] - errors_test[i-2])>0 and (errors_test[i-4] - errors_test[i-3])<0):
+               stepsize = stepsize *0.90
+            elif(i>5 and  errors_test[i] == errors_test[i-1] and errors_test[i-1] == errors_test[i-2] and errors_test[i-2] == errors_test[i-3] and errors_test[i-3] == errors_test[i-4] and errors_test[i-4] == errors_test[i-5]):
+                stepsize = stepsize * 1.1
             print(stepsize)
+            self.w -= stepsize * self.gradient(X, y)
+
 
         print("Entrainement terminé :l'erreur d'entrainement est {:.2f}%".format(errors[-1]*100))
-        #fait un for qui print les 10 plus petites erreurs de test et leurs indices sans sort le tableau
-        print("Les 10 plus petites erreurs de test sont :")
-        for i in range(10):
-            print("Erreur {:.2f}%".format(errors_test[np.argpartition(errors_test, i)[i]]*100), "à l'itération", np.argpartition(errors_test, i)[i])
+        print("la plus petite erreur de test est {:.2f}%".format(min(errors_test)*100))
 
-        #print("La plus petite erreur de test est {:.2f}%".format(min(errors_test)*100), "à l'itération", np.argmin(errors_test))
-
-        return np.array(losses), np.array(errors), np.array(errors_test)
+        return np.array(losses), np.array(errors)
     
 def find_hyperparameters(trainset):
     reg_test = [0.001,0.0001,0.00001]
@@ -159,8 +155,8 @@ def find_hyperparameters(trainset):
 n_class = 3
 n_features = 20
 reg = 1e-6
-stepsize = 5
-n_steps = 2000
+stepsize = 0.1
+n_steps = 10000
 
 
 print(" -1 to train the model \n -2 to train with all the data \n -3 to load a model and predict \n -4 to find the best hyperparameters \n -5 to start training from an existing model \n -6 to start training from an existing model with all the data \n -7 to train in a loop of training")
@@ -170,14 +166,14 @@ match int(anwser):
         #Train the model with a subset of the data
         model = LogisticRegression(n_class, n_features, reg)
         trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=35000)
-        training_loss, training_error, test_error  = model.train(trainset,testset,stepsize, n_steps)
+        training_loss, training_error = model.train(trainset,testset,stepsize, n_steps)
         # learning curves
-        fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(8,2))
+        """ fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(8,2))
         ax0.plot(test_error)
         ax0.set_title('test_error')
         ax1.plot(training_loss)
         ax1.set_title('loss ( risque empirique )')
-        plt.show()
+        plt.show() """
         #Save the model with the test error as name
         test_error = model.error_rate(testset[:,:-1], testset[:,-1])*100
         print("The test error is {:.2f}%".format(test_error))
