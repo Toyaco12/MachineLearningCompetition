@@ -76,7 +76,7 @@ class LogisticRegression():
         self.reg = reg
     
     def softmax(self, scores):
-        exp_scores = np.exp(scores - np.max(scores, axis=1, keepdims=True))
+        exp_scores = np.exp(scores - np.max(scores, axis=1, keepdims=True))  # prevent overflow
         probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
         return probs
 
@@ -94,7 +94,7 @@ class LogisticRegression():
         proba = self.softmax(score)
         entropy = -np.log(proba[range(X.shape[0]), y])
         loss = np.sum(entropy)
-        return loss + (self.reg * np.linalg.norm(self.w)**2)
+        return loss + (self.reg * np.linalg.norm(self.w)**2)  # régularisation
     
     def gradient(self, X, y):
         y = y.astype(int)
@@ -105,11 +105,10 @@ class LogisticRegression():
         dloss /= X.shape[0]
 
         grad = np.dot(X.T, dloss)
-        grad += self.reg * self.w
+        grad += self.reg * self.w  # régularisation = dérivée de reg * la norme au carré
         return grad
     
     def train(self,data,stepsize,n_steps, valdata):
-        
         X = data[:,:-1]
         y = data[:,-1]
         losses = []
@@ -120,7 +119,8 @@ class LogisticRegression():
         for i in tqdm.tqdm(range(n_steps)):
             if i % 100 == 0:
                 stepsize /= 2
-            self.w -= stepsize * self.gradient(X, y)
+            grad = self.gradient(X, y)
+            self.w -= stepsize * grad
             stock_w.append(self.w)  #
             losses.append(self.loss(X, y))
             errors.append(self.error_rate(X, y))
@@ -139,9 +139,12 @@ def train_part(n_class, n_features, reg, stepsize, n_step):
     # Entraînement
     training_loss, training_error, val_error, best_w = model.train(trainset, stepsize, n_step, valset)
 
-    # test_error = model.error_rate(valset[:,:-1], valset[:,-1])*100
-    # print("The test error is {:.2f}%".format(test_error))
+    test_error = model.error_rate(valset[:,:-1], valset[:,-1])*100
+    print("The test error is {:.2f}%".format(test_error))
 
+    best_test_error = min(val_error)
+    print("The best test error is {:.2f}%".format(best_test_error*100), "at iteration", np.where(val_error == best_test_error)[0][0])
+          
     return training_loss, training_error, val_error, best_w
 
 # Fontion pour entraîner le modèle avec toutes les données.
@@ -161,6 +164,7 @@ def test(filename):
     with open(f"submission/{filename.rsplit('.',1)[0]}.csv", 'w') as f: 
         for idx, pred in enumerate(predictions, 1):  
             f.write(f"{idx},{pred}\n")
+            exit()
 
 def val_exist(filename):
     #Train the model with a subset of the data from an existing model
@@ -175,8 +179,9 @@ def val_exist(filename):
     # filename = f"model/error_{test_error:.2f}.joblib"
     # dump(model, filename)
 
+res = train_part(3, 20, 0.0001, 5, 500)
 # val_exist("error_15.81.joblib")
-test("error_15.81.joblib")
+# test("error_15.81.joblib")
 
 
 ### VAL OPT
