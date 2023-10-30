@@ -155,8 +155,8 @@ def find_hyperparameters(trainset):
 n_class = 3
 n_features = 20
 reg = 1e-6
-stepsize = 0.1
-n_steps = 10000
+stepsize = 1
+n_steps = 5000
 
 
 print(" -1 to train the model \n -2 to train with all the data \n -3 to load a model and predict \n -4 to find the best hyperparameters \n -5 to start training from an existing model \n -6 to start training from an existing model with all the data \n -7 to train in a loop of training")
@@ -220,8 +220,7 @@ match int(anwser):
         filename = input()
         model = load(f"model/{filename}")
         trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
-        stepsize = 0.1
-        training_loss, training_error = model.train(trainset, stepsize, n_steps)
+        training_loss, training_error = model.train(trainset,testset, stepsize, n_steps)
 
         #Save the model with the test error as name
         test_error = model.error_rate(testset[:,:-1], testset[:,-1])*100
@@ -234,9 +233,10 @@ match int(anwser):
         print("Enter the name of the model to load :")
         filename = input()
         model = load(f"model/{filename}")
+        
         trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
-        stepsize = 0.1
-        training_loss, training_error = model.train(trainset, stepsize, n_steps)
+        tr, ts = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
+        training_loss, training_error = model.train(trainset,ts, stepsize, n_steps)
         #Save the model with a random name
         rgn = str(np.random.default_rng().integers(0, 50))+str(np.random.default_rng().integers(0, 50))
         print(rgn)
