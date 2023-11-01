@@ -114,24 +114,25 @@ class LogisticRegression():
         losses = []
         errors = []
         errors_test = []
+        stock_w = []
         
         for i in range(n_steps):
                             
             losses.append(self.loss(X, y))
             errors.append(self.error_rate(X, y))
             errors_test.append(self.error_rate(data_test[:,:-1], data_test[:,-1]))
+            stock_w.append(self.w)  
             if(i>5 and (errors_test[i-1] - errors_test[i])>0 and (errors_test[i-2] - errors_test[i-1])<0 and (errors_test[i-3] - errors_test[i-2])>0 and (errors_test[i-4] - errors_test[i-3])<0):
                stepsize = stepsize *0.90
             elif(i>5 and  errors_test[i] == errors_test[i-1] and errors_test[i-1] == errors_test[i-2] and errors_test[i-2] == errors_test[i-3] and errors_test[i-3] == errors_test[i-4] and errors_test[i-4] == errors_test[i-5]):
                 stepsize = stepsize * 1.1
-            print(stepsize)
             self.w -= stepsize * self.gradient(X, y)
 
 
         print("Entrainement terminé :l'erreur d'entrainement est {:.2f}%".format(errors[-1]*100))
         print("la plus petite erreur de test est {:.2f}%".format(min(errors_test)*100))
 
-        return np.array(losses), np.array(errors)
+        return np.array(losses), np.array(errors), np.array(errors_test), stock_w[errors_test.index(min(errors_test))]
     
 def find_hyperparameters(trainset):
     reg_test = [0.001,0.0001,0.00001]
@@ -155,18 +156,33 @@ def find_hyperparameters(trainset):
 n_class = 3
 n_features = 20
 reg = 1e-6
-stepsize = 1
-n_steps = 5000
+stepsize = 0.1
+n_steps = 1000
+filename = "model/17.17.joblib"
+""" for i in range(100):
+        print("Enter the name of the model to load :")
+        print(filename)
+        model = load(f"{filename}")
+        trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
+        training_loss, training_error,test_error,bestw = model.train(trainset,testset, stepsize, n_steps)
 
+        #Save the model with the test error as name
+        best_test_error = min(test_error)*100
+        print("The test error is {:.2f}%".format(best_test_error))
+        model.w = bestw
+        filename = f"model/{best_test_error:.2f}.joblib"
+        dump(model, filename) """
 
 print(" -1 to train the model \n -2 to train with all the data \n -3 to load a model and predict \n -4 to find the best hyperparameters \n -5 to start training from an existing model \n -6 to start training from an existing model with all the data \n -7 to train in a loop of training")
 anwser = input()
 match int(anwser):
+    case 0:
+        exit()
     case 1:
         #Train the model with a subset of the data
         model = LogisticRegression(n_class, n_features, reg)
         trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=35000)
-        training_loss, training_error = model.train(trainset,testset,stepsize, n_steps)
+        training_loss, training_error,test_error,bestw = model.train(trainset,testset,stepsize, n_steps)
         # learning curves
         """ fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(8,2))
         ax0.plot(test_error)
@@ -175,9 +191,10 @@ match int(anwser):
         ax1.set_title('loss ( risque empirique )')
         plt.show() """
         #Save the model with the test error as name
-        test_error = model.error_rate(testset[:,:-1], testset[:,-1])*100
-        print("The test error is {:.2f}%".format(test_error))
-        filename = f"model/error_{test_error:.2f}.joblib"
+        best_test_error = min(test_error)*100
+        print("The test error is {:.2f}%".format(best_test_error))
+        model.w = bestw
+        filename = f"model/{best_test_error:.2f}.joblib"
         dump(model, filename)
 
     case 2:
@@ -220,12 +237,13 @@ match int(anwser):
         filename = input()
         model = load(f"model/{filename}")
         trainset, testset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=30000)
-        training_loss, training_error = model.train(trainset,testset, stepsize, n_steps)
+        training_loss, training_error,test_error,bestw = model.train(trainset,testset, stepsize, n_steps)
 
         #Save the model with the test error as name
-        test_error = model.error_rate(testset[:,:-1], testset[:,-1])*100
-        print("The test error is {:.2f}%".format(test_error))
-        filename = f"model/error_{test_error:.2f}.joblib"
+        best_test_error = min(test_error)*100
+        print("The test error is {:.2f}%".format(best_test_error))
+        model.w = bestw
+        filename = f"model/{best_test_error:.2f}.joblib"
         dump(model, filename)
 
     case 6:
