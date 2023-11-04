@@ -200,15 +200,19 @@ def create_trained_modelV2(n_steps, early_stopping_rounds=50):
     return model
 
 def find_best_hypermaters(n_steps):
+    it = 1
+
     best_reg = None
     best_stepsize = None
     best_decay_rate = None
-    best_error = 1
+    best_error = 100
     best_model = None
 
     for reg in [0.0001,0.001,0.01,0.1]:
         for stepsize in [0.1,1,10,100]:
             for decay_rate in [0.0001,0.001,0.01,0.1]:
+                print("\nItération {} : reg = {}, stepsize = {}, decay_rate = {}".format(it,reg,stepsize,decay_rate))
+                it = it + 1
                 model, error = create_trained_model(n_steps,stepsize,reg,decay_rate)
                 if error < best_error:
                     best_error = error
@@ -217,9 +221,14 @@ def find_best_hypermaters(n_steps):
                     best_decay_rate = decay_rate
                     best_model = model
     print("Les meilleurs hyperparamètres sont : reg = {}, stepsize = {}, decay_rate = {}".format(best_reg,best_stepsize,best_decay_rate))
-    return best_model,best_reg,best_stepsize,best_decay_rate
+    return best_model,best_reg,best_stepsize,best_decay_rate, best_error
 
 #mymodel, myreg, mystepsize, mydecay_rate = find_best_hypermaters(1000)
 #mymodel = create_trained_model(1000,1,0.0001,0.01,mode = "train")
 mymodel = create_trained_modelV2(1000)
+
+# model, reg, stepsize, decay_rate, error = find_best_hypermaters(800)
+# print("Les meilleurs hyperparamètres sont : reg = {}, stepsize = {}, decay_rate = {}".format(reg,stepsize,decay_rate))
+# print("L'erreur de val est {:.2f}%".format(error))
+# dump(model, 'model/best.joblib')
 
