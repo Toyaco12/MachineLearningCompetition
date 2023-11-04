@@ -72,7 +72,7 @@ def preprocess_V2(data_train,data_test, label_subset, feature_subset):
 class LogisticRegression():
     #Régression logistique multinomiale avec descente de gradient
 
-    def __init__(self,n_class,n_features,reg):
+    def __init__(self, n_class, n_features, reg):
         limit = np.sqrt(6 / (n_features + n_class))
         self.w = np.random.uniform(-limit, limit, (n_features, n_class))
         self.reg = reg
@@ -96,7 +96,8 @@ class LogisticRegression():
         proba = self.softmax(score)
         entropy = -np.log(proba[range(X.shape[0]), y])
         loss = np.sum(entropy)
-        return loss + (self.reg * np.linalg.norm(self.w)**2)
+        # L1 regularization term, sum of absolute values of weights
+        return loss + self.reg * np.sum(np.abs(self.w))
     
     def gradient(self, X, y):
         y = y.astype(int)
@@ -107,7 +108,8 @@ class LogisticRegression():
         dloss /= X.shape[0]
 
         grad = np.dot(X.T, dloss)
-        grad += self.reg * self.w
+        # L1 gradient is the sign of weights
+        grad += self.reg * np.sign(self.w)
         return grad
     
     def train(self,data,stepsize,n_steps,decay_rate):
@@ -204,10 +206,10 @@ def find_best_hypermaters(n_steps):
     best_error = 100
     best_early_stopping_rounds = None
 
-    for reg in [0.0001,0.00001]:
-        for stepsize in [0.1,0.5,1,1.5]:
-            for decay_rate in [0.0001,0.001,0.01]:
-                for early_stopping_rounds in [50,100,200,300,400]:
+    for reg in [0.01,0.001,0.0001]:
+        for stepsize in [0.5,1,1.5]:
+            for decay_rate in [0.001,0.01]:
+                for early_stopping_rounds in [200,300,400]:
                     model, error = create_trained_modelV2(n_steps,stepsize,reg,decay_rate)
                     if error < best_error:
                         best_error = error
@@ -219,13 +221,13 @@ def find_best_hypermaters(n_steps):
     print("Les meilleurs hyperparamètres sont : reg = {}, stepsize = {}, decay_rate = {}, early_stop = {}, pour une erreur de : {}".format(best_reg,best_stepsize,best_decay_rate,best_early_stopping_rounds,best_error))
     return best_model,best_reg,best_stepsize,best_decay_rate,best_early_stopping_rounds
 
-""" mymodel,myreg, mystepsize, mydecay_rate,my_early_stopping_rounds = find_best_hypermaters(2000)
+mymodel,myreg, mystepsize, mydecay_rate,my_early_stopping_rounds = find_best_hypermaters(2000)
 trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
 predictions = mymodel.predict(testset)
 with open(f"submission/submit.csv", 'w') as f: 
     for idx, pred in enumerate(predictions, 1):  
-         f.write(f"{idx},{pred}\n") """
+         f.write(f"{idx},{pred}\n")
 
 #mymodel = create_trained_model(1000,1.5,0.00001,0.001,mode = "test")
-mymodel = create_trained_modelV2(10000,1.5,0,0.001,300)
+#mymodel = create_trained_modelV2(10000,1.5,0.01,0.001,300)
 #mymodel = create_trained_modelV2(10000)
