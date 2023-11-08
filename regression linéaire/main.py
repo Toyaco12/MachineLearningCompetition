@@ -167,18 +167,18 @@ class LogisticRegression():
         return np.array(losses), np.array(errors)
     
 n_class = 3
-n_features = 20
+n_features = 10
 
 def create_trained_model(n_steps,stepsize,reg,decay_rate,mode = "train"):
     errors_val = None
     if mode == "train":
-        trainset, valset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=37500)
+        trainset, valset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[3,4,5,8,9,13,14,15,17], n_train=37500)
         model = LogisticRegression(n_class,n_features,reg)
         losses, errors = model.train(trainset,stepsize,n_steps,decay_rate)
         errors_val = model.error_rate(valset[:,:-1],valset[:,-1])*100
         print("L'erreur de val est {:.2f}%".format(errors_val))
     elif mode == "test":
-        trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
+        trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[3,4,5,8,9,13,14,15,17])
         model = LogisticRegression(n_class,n_features,reg)
         losses, errors = model.train(trainset,stepsize,n_steps,decay_rate)
         predictions = model.predict(testset)
@@ -190,11 +190,17 @@ def create_trained_model(n_steps,stepsize,reg,decay_rate,mode = "train"):
 
 def create_trained_modelV2(n_steps,stepsize,reg,decay_rate,early_stopping_rounds=200):
 
-    trainset, valset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], n_train=37500)
+    trainset, valset = preprocess(weather_dataset_train, label_subset=[0,1,2], feature_subset=[3,4,5,8,9,13,14,15,17], n_train=37500)
     model = LogisticRegression(n_class, n_features, reg)
     losses, errors = model.train_with_early_stopping(trainset, valset, stepsize, n_steps, early_stopping_rounds, decay_rate)
     errors_val = model.error_rate(valset[:,:-1],valset[:,-1])*100
-
+        # learning curves
+    fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(8,2))
+    ax0.plot(losses)
+    ax0.set_title('loss')
+    ax1.plot(errors)
+    ax1.set_title('error rate')
+    plt.show()
 
     return model,errors_val
 
@@ -222,7 +228,7 @@ def find_best_hypermaters(n_steps):
     return best_model,best_reg,best_stepsize,best_decay_rate,best_early_stopping_rounds
 
 # mymodel,myreg, mystepsize, mydecay_rate,my_early_stopping_rounds = find_best_hypermaters(2000)
-# trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19])
+# trainset, testset = preprocess_V2(weather_dataset_train,weather_dataset_test, label_subset=[0,1,2], feature_subset=[3,4,5,8,9,13,14,15,17])
 # predictions = mymodel.predict(testset)
 # with open(f"submission/submit.csv", 'w') as f: 
 #     for idx, pred in enumerate(predictions, 1):  
